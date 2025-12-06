@@ -1,15 +1,13 @@
-name: Deploy to GitHub Pages
+name: Deploy React App to GitHub Pages
 
 on:
   push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+    branches:
+      - master # اضبط هذا ليتطابق مع الفرع الرئيسي لمشروعك
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -17,18 +15,27 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20' # يمكنك تغيير النسخة حسب احتياج مشروعك
         cache: 'npm'
 
     - name: Install dependencies
-      run: npm ci
+      run: npm install
 
-    - name: Build
-      run: npm run build
+    - name: Build project
+      run: npm run build # تأكد أن هذا الأمر صحيح في ملف package.json لديك
+      env:
+        # إذا كنت تستخدم React Router، قد تحتاج لتعيين BASE_URL أو PUBLIC_URL
+        PUBLIC_URL: /ExtensionHub/
+
+    - name: Configure GitHub Pages (Optional but recommended for React)
+      uses: actions/configure-pages@v4
+
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        # تأكد أن هذا المسار يطابق مجلد الإخراج (Output) بعد البناء (قد يكون 'dist' أو 'build')
+        path: './dist'
 
     - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
-      if: github.ref == 'refs/heads/master'
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./dist
+      id: deployment
+      uses: actions/deploy-pages@v4
