@@ -12,12 +12,6 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Setup Node.js (optional)
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-
     - name: Determine build output
       id: detect
       run: |
@@ -37,6 +31,13 @@ jobs:
           # default to repo root (useful for static sites with index.html)
           echo "OUTPUT_PATH=." >> $GITHUB_ENV
         fi
+
+    - name: Setup Node.js (only if Node project)
+      if: env.PACKAGE_JSON == 'true'
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
 
     - name: Install & build (if Node project)
       if: env.PACKAGE_JSON == 'true'
