@@ -12,29 +12,49 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Setup Node.js
+    - name: Setup Node.js (optional)
       uses: actions/setup-node@v4
       with:
-        node-version: '20' # يمكنك تغيير النسخة حسب احتياج مشروعك
+        node-version: '20'
         cache: 'npm'
 
-    - name: Install dependencies
-      run: npm install
+    - name: Determine build output
+      id: detect
+      run: |
+        echo "Checking for package.json and build outputs..."
+        if [ -f package.json ]; then
+          echo "PACKAGE_JSON=true" >> $GITHUB_ENV
+        else
+          echo "PACKAGE_JSON=false" >> $GITHUB_ENV
+        fi
 
-    - name: Build project
-      run: npm run build # تأكد أن هذا الأمر صحيح في ملف package.json لديك
+        # Prefer common build folders if they exist
+        if [ -d build ]; then
+          echo "OUTPUT_PATH=build" >> $GITHUB_ENV
+        elif [ -d dist ]; then
+          echo "OUTPUT_PATH=dist" >> $GITHUB_ENV
+        else
+          # default to repo root (useful for static sites with index.html)
+          echo "OUTPUT_PATH=." >> $GITHUB_ENV
+        fi
+
+    - name: Install & build (if Node project)
+      if: env.PACKAGE_JSON == 'true'
+      run: |
+        npm install
+        if npm run | grep -q "build"; then
+          npm run build
+        fi
       env:
-        # إذا كنت تستخدم React Router، قد تحتاج لتعيين BASE_URL أو PUBLIC_URL
         PUBLIC_URL: /ExtensionHub/
 
-    - name: Configure GitHub Pages (Optional but recommended for React)
+    - name: Configure GitHub Pages
       uses: actions/configure-pages@v4
 
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
       with:
-        # تأكد أن هذا المسار يطابق مجلد الإخراج (Output) بعد البناء (قد يكون 'dist' أو 'build')
-        path: './dist'
+        path: ${{ env.OUTPUT_PATH }}
 
     - name: Deploy to GitHub Pages
       id: deployment
