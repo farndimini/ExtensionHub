@@ -1,61 +1,48 @@
-name: Deploy React App to GitHub Pages
+name: Deploy to GitHub Pages
 
 on:
   push:
-    branches:
-      - master # اضبط هذا ليتطابق مع الفرع الرئيسي لمشروعك
+    branches: ["master"]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Determine build output
-      id: detect
-      run: |
-        echo "Checking for package.json and build outputs..."
-        if [ -f package.json ]; then
-          echo "PACKAGE_JSON=true" >> $GITHUB_ENV
-        else
-          echo "PACKAGE_JSON=false" >> $GITHUB_ENV
-        fi
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          # Intentionally validation of lockfile disabled by not explicitly caching
+          
+      - name: Install dependencies
+        run: npm install
 
-        # Prefer common build folders if they exist
-        if [ -d build ]; then
-          echo "OUTPUT_PATH=build" >> $GITHUB_ENV
-        elif [ -d dist ]; then
-          echo "OUTPUT_PATH=dist" >> $GITHUB_ENV
-        else
-          # default to repo root (useful for static sites with index.html)
-          echo "OUTPUT_PATH=." >> $GITHUB_ENV
-        fi
+      - name: Build
+        run: npm run build
+        
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
 
-    - name: Setup Node.js (only if Node project)
-      if: env.PACKAGE_JSON == 'true'
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist'
 
-    - name: Install & build (if Node project)
-      if: env.PACKAGE_JSON == 'true'
-      run: |
-        npm install
-        if npm run | grep -q "build"; then
-          npm run build
-        fi
-      env:
-        PUBLIC_URL: /ExtensionHub/
-
-    - name: Configure GitHub Pages
-      uses: actions/configure-pages@v4
-
-    - name: Upload artifact
-      uses: actions/upload-pages-artifact@v3
-      with:
-        path: ${{ env.OUTPUT_PATH }}
-
-    - name: Deploy to GitHub Pages
-      id: deployment
-      uses: actions/deploy-pages@v4
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
